@@ -39,3 +39,6 @@ CMakeFiles/
 Makefile
 *.cmake
 CMakeCache.txt
+
+# Test Data
+tests/data/output_feed
