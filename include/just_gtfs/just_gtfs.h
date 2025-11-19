@@ -1232,9 +1232,9 @@ using Stops = std::vector<Stop>;
 using Routes = std::vector<Route>;
 using Trips = std::vector<Trip>;
 using StopTimes = std::vector<StopTime>;
-using StopTimeIndices = std::vector<size_t>;
+using StopTimesById = std::vector<const StopTime*>;
 using StopTimesRange = std::pair<StopTimes::const_iterator, StopTimes::const_iterator>;
-using StopTimeIndicesRange = std::pair<StopTimeIndices::const_iterator, StopTimeIndices::const_iterator>;
+using StopTimesByIdRange = std::pair<StopTimesById::const_iterator, StopTimesById::const_iterator>;
 using Calendar = std::vector<CalendarItem>;
 using CalendarDates = std::vector<CalendarDate>;
 using CalendarDatesRange = std::pair<CalendarDates::const_iterator, CalendarDates::const_iterator>;
@@ -1296,7 +1296,7 @@ public:
   inline Result write_stop_times(const std::string & gtfs_path) const;
 
   inline const StopTimes & get_stop_times() const;
-  inline StopTimeIndicesRange get_stop_time_indices_for_stop(const Id & stop_id) const;
+  inline StopTimesByIdRange get_stop_times_for_stop(const Id & stop_id) const;
   inline StopTimesRange get_stop_times_for_trip(const Id & trip_id) const;
   inline void add_stop_time(const StopTime & stop_time);
 
@@ -1441,7 +1441,7 @@ protected:
   Routes routes;
   Trips trips;
   StopTimes stop_times;
-  StopTimeIndices stop_time_indices;
+  StopTimesById stop_times_by_id;
 
   Calendar calendar;
   CalendarDates calendar_dates;
@@ -1533,13 +1533,13 @@ inline Result Feed::read_feed(bool strict)
             [](const auto & a, const auto & b)
             { return a.trip_id < b.trip_id || (a.trip_id == b.trip_id && a.stop_sequence < b.stop_sequence); });
   // because we can look stop times also by stop id we create a secondary index
-  stop_time_indices.resize(stop_times.size());
-  std::iota(stop_time_indices.begin(), stop_time_indices.end(), 0);
-  std::sort(stop_time_indices.begin(), stop_time_indices.end(),
-            [this](const auto idxa, const auto idxb)
+  stop_times_by_id.resize(stop_times.size());
+  std::transform(stop_times.begin(), stop_times.end(), stop_times_by_id.begin(),
+               [](StopTime& st) { return &st; });
+  std::sort(stop_times_by_id.begin(), stop_times_by_id.end(),
+            [](const auto* a, const auto* b)
             {
-              const auto &a = stop_times[idxa], b = stop_times[idxb];
-              return a.stop_id < b.stop_id || (a.stop_id == b.stop_id && a.trip_id < b.trip_id);
+              return a->stop_id < b->stop_id || (a->stop_id == b->stop_id && a->trip_id < b->trip_id);
             });
   std::sort(calendar.begin(), calendar.end(),
             [](const auto & a, const auto & b) { return a.service_id < b.service_id; });
@@ -2410,14 +2410,14 @@ inline Result Feed::write_stop_times(const std::string & gtfs_path) const
 
 inline const StopTimes & Feed::get_stop_times() const { return stop_times; }
 
-inline StopTimeIndicesRange Feed::get_stop_time_indices_for_stop(const Id & stop_id) const
+inline StopTimesByIdRange Feed::get_stop_times_for_stop(const Id & stop_id) const
 {
-  const auto start = std::lower_bound(stop_time_indices.begin(), stop_time_indices.end(), stop_id,
-                                      [this](uint32_t idx, const Id & id)
-                                      { return stop_times[idx].stop_id < id; });
+  const auto start = std::lower_bound(stop_times_by_id.begin(), stop_times_by_id.end(), stop_id,
+                                      [](const auto * stop_time, const Id & id)
+                                      { return stop_time->stop_id < id; });
   const auto end =
-      std::upper_bound(start, stop_time_indices.end(), stop_id, [this](const Id & id, uint32_t idx)
-                       { return id < stop_times[idx].stop_id; });
+      std::upper_bound(start, stop_times_by_id.end(), stop_id, [](const Id & id, const auto * stop_time)
+                       { return id < stop_time->stop_id; });
   return {start, end};
 }
 

@@ -434,8 +434,8 @@ TEST_CASE("StopTimes")
   CHECK_EQ(stop_times[i].pickup_type, StopTimeBoarding::RegularlyScheduled);
   CHECK_EQ(stop_times[i].drop_off_type, StopTimeBoarding::RegularlyScheduled);
 
-  CHECK_EQ(std::distance(feed.get_stop_time_indices_for_stop("STAGECOACH").first,
-                         feed.get_stop_time_indices_for_stop("STAGECOACH").second),
+  CHECK_EQ(std::distance(feed.get_stop_times_for_stop("STAGECOACH").first,
+                         feed.get_stop_times_for_stop("STAGECOACH").second),
            3);
 
   CHECK_EQ(std::distance(feed.get_stop_times_for_trip("STBA").first,
