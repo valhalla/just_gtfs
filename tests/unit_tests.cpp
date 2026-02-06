@@ -4,10 +4,18 @@
 #include "just_gtfs/just_gtfs.h"
 
 #include <iterator>
+#include <filesystem>
 
 using namespace gtfs;
-const std::string test_feed = "data/sample_feed";
-const std::string test_output_feed = "data/output_feed";
+const std::string test_feed = CMAKE_SOURCE_DIR "/tests/data/sample_feed";
+const std::string test_output_feed = CMAKE_SOURCE_DIR "/tests/data/output_feed";
+
+struct TestSetup {
+  TestSetup() {
+    std::filesystem::create_directories(test_output_feed);
+  }
+};
+static TestSetup test_setup;
 
 TEST_SUITE_BEGIN("Handling time GTFS fields");
 TEST_CASE("Time in H:MM:SS format")
@@ -426,7 +434,9 @@ TEST_CASE("StopTimes")
   CHECK_EQ(stop_times[i].pickup_type, StopTimeBoarding::RegularlyScheduled);
   CHECK_EQ(stop_times[i].drop_off_type, StopTimeBoarding::RegularlyScheduled);
 
-  CHECK_EQ(feed.get_stop_times_for_stop("STAGECOACH").size(), 3);
+  CHECK_EQ(std::distance(feed.get_stop_times_for_stop("STAGECOACH").first,
+                         feed.get_stop_times_for_stop("STAGECOACH").second),
+           3);
 
   CHECK_EQ(std::distance(feed.get_stop_times_for_trip("STBA").first,
                          feed.get_stop_times_for_trip("STBA").second),
